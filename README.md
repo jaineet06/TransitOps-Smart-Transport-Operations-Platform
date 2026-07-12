@@ -18,14 +18,14 @@ A full-stack fleet management platform for tracking vehicles, drivers, trips, ma
 ## Tech Stack
 
 **Backend**
-- Node.js + Express 5
+- Node.js + Express 
 - PostgreSQL + Prisma ORM
 - JWT authentication (access + refresh tokens), `bcryptjs` password hashing
 - Zod validation, `express-rate-limit`, `helmet`, `cors`, `morgan` logging
 - `nodemailer` for email alerts
 
 **Frontend**
-- React 19 + Vite
+- React + Vite
 - Tailwind CSS
 - Zustand (state management)
 - React Hook Form + Zod (forms & validation)
