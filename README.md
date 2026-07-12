@@ -12,7 +12,6 @@ A full-stack fleet management platform for tracking vehicles, drivers, trips, ma
 - [Screenshots](#screenshots)
 - [Getting Started](#getting-started)
 - [Folder Structure](#folder-structure)
-- [License](#license)
 
 ---
 
@@ -119,6 +118,34 @@ A full-stack fleet management platform for tracking vehicles, drivers, trips, ma
 | **Dispatcher** | Trip creation/dispatch, vehicle & driver assignment |
 | **Safety Officer** | Driver records, license alerts, safety scores, maintenance oversight, sends license reminder emails |
 | **Financial Analyst** | Analytics, fuel/expense reports, ROI, CSV export |
+
+---
+
+## Screenshots
+
+### Login Page
+![Login Page](screenshots/login.jpeg)
+
+### Dashboard Page
+![Dashboard Page](screenshots/dashboard.jpeg)
+
+### Vehicles Page
+![Vehicles Page](screenshots/vehicles.jpeg)
+
+### Drivers Page
+![Drivers Page](screenshots/drivers.jpeg)
+
+### Trips Page
+![Trips Page](screenshots/trips-kanban.jpeg)
+
+### Maintenance Page
+![Maintenance Page](screenshots/maintenance-calendar.jpeg)
+
+### Fuel & Expenses Page
+![Fuel & Expenses Page](screenshots/fuel-expenses.jpeg)
+
+### Analytics Page
+![Analytics Page](screenshots/analytics.jpeg)
 
 ---
 
