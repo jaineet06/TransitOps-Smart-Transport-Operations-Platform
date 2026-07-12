@@ -28,6 +28,7 @@ export async function create(data) {
         const driver = await prisma.driver.create({
             data: {
                 name: data.name,
+                email: data.email,
                 licenseNumber: data.licenseNumber,
                 licenseCategory: data.licenseCategory,
                 licenseExpiryDate: data.licenseExpiryDate,
@@ -41,6 +42,7 @@ export async function create(data) {
     } catch (err) {
         handlePrismaError(err, {
             licenseNumber: 'A driver with this license number already exists',
+            email: 'A driver with this email address already exists',
         });
     }
 }
@@ -111,6 +113,7 @@ export async function update(id, data) {
     } catch (err) {
         handlePrismaError(err, {
             licenseNumber: 'A driver with this license number already exists',
+            email: 'A driver with this email address already exists',
         });
     }
 }

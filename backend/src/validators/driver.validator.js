@@ -5,6 +5,7 @@ const driverStatusEnum = z.enum(['Available', 'OnTrip', 'OffDuty', 'Suspended'])
 
 export const createDriverSchema = z.object({
     name: z.string().trim().min(1, 'Name is required'),
+    email: z.string().trim().email('Invalid email address'),
     licenseNumber: z.string().trim().min(1, 'License number is required'),
     licenseCategory: z.string().trim().min(1, 'License category is required'),
     licenseExpiryDate: z.coerce
@@ -20,6 +21,7 @@ export const createDriverSchema = z.object({
 export const updateDriverSchema = z
     .object({
         name: z.string().trim().min(1).optional(),
+        email: z.string().trim().email('Invalid email address').optional(),
         licenseNumber: z.string().trim().min(1).optional(),
         licenseCategory: z.string().trim().min(1).optional(),
         licenseExpiryDate: z.coerce.date({ invalid_type_error: 'Invalid license expiry date' }).optional(),

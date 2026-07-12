@@ -142,10 +142,14 @@ async function main() {
         const status = driverStatuses[i];
         const expiry = (i === 8 || i === 9) ? soonExpiringDate : normalExpiringDate;
         const licNum = `DL-${faker.string.numeric(13)}`;
+        const name = faker.person.fullName();
+        const cleanName = name.replace(/[^a-zA-Z]/g, '').toLowerCase();
+        const email = `${cleanName}${i + 1}@transitops.com`;
 
         const d = await prisma.driver.create({
             data: {
-                name: faker.person.fullName(),
+                name,
+                email,
                 licenseNumber: licNum,
                 licenseCategory: faker.helpers.arrayElement(licenseCategories),
                 licenseExpiryDate: expiry,

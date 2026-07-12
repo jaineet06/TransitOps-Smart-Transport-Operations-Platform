@@ -39,6 +39,7 @@ export async function getLicenseAlerts() {
             id: `license-${driver.id}`,
             driverId: driver.id,
             driverName: driver.name,
+            driverEmail: driver.email,
             licenseNumber: driver.licenseNumber,
             licenseExpiryDate: driver.licenseExpiryDate,
             daysRemaining: diffTime <= 0 ? 0 : diffDays,
@@ -107,20 +108,88 @@ export async function getMaintenanceAlerts() {
 }
 
 /**
+ * Get active dispatched trips that are delayed.
+ * Elapsed time > (plannedDistance / 40) * 1.5
+ */
+export async function getTripDelayAlerts() {
+    const now = new Date();
+    const dispatchedTrips = await prisma.trip.findMany({
+        where: {
+            status: 'Dispatched',
+        },
+    });
+
+    const alerts = [];
+
+    for (const trip of dispatchedTrips) {
+        if (!trip.dispatchedAt) continue;
+
+        const plannedDistance = parseFloat(trip.plannedDistance);
+        const estimatedHours = plannedDistance / 40;
+        const estimatedMs = estimatedHours * 60 * 60 * 1000;
+        const elapsedTime = now - new Date(trip.dispatchedAt);
+
+        if (elapsedTime > estimatedMs * 1.5) {
+            alerts.push({
+                id: `trip-delay-${trip.id}`,
+                tripId: trip.id,
+                text: `Trip ${trip.id} is running longer than expected`,
+                severity: 'warning',
+                type: 'trip-delay',
+            });
+        }
+    }
+
+    return alerts;
+}
+
+/**
+ * Warns if fleet utilization is below 40%.
+ */
+export async function getUtilizationAlerts() {
+    const [onTripCount, nonRetiredCount] = await Promise.all([
+        prisma.vehicle.count({ where: { status: 'OnTrip' } }),
+        prisma.vehicle.count({ where: { status: { not: 'Retired' } } }),
+    ]);
+
+    const utilization = nonRetiredCount === 0 ? 0 : (onTripCount / nonRetiredCount) * 100;
+    const alerts = [];
+
+    if (utilization < 40) {
+        alerts.push({
+            id: 'utilization-alert',
+            text: 'Fleet utilization is below 40% — consider reviewing idle vehicles',
+            severity: 'warning',
+            type: 'utilization',
+        });
+    }
+
+    return alerts;
+}
+
+/**
  * Get notification summary for counts and alert details.
  * @returns {Promise<Object>} Object containing counts and arrays of alerts
  */
 export async function getNotifications() {
-    const [licenseAlerts, maintenanceAlerts] = await Promise.all([
+    const [licenseAlerts, maintenanceAlerts, tripDelayAlerts, utilizationAlerts] = await Promise.all([
         getLicenseAlerts(),
         getMaintenanceAlerts(),
+        getTripDelayAlerts(),
+        getUtilizationAlerts(),
     ]);
 
-    const totalCount = licenseAlerts.length + maintenanceAlerts.length;
+    const totalCount =
+        licenseAlerts.length +
+        maintenanceAlerts.length +
+        tripDelayAlerts.length +
+        utilizationAlerts.length;
 
     return {
         licenseAlerts,
         maintenanceAlerts,
+        tripDelayAlerts,
+        utilizationAlerts,
         totalCount,
     };
 }

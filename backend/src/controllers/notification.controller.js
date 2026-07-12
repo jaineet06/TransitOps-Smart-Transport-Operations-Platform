@@ -26,71 +26,71 @@ export async function sendLicenseReminders(req, res, next) {
         if (licenseAlerts.length === 0) {
             return res.status(200).json({
                 success: true,
+                sent: 0,
+                failed: 0,
                 message: 'No expiring or expired licenses found. No email sent.',
-                count: 0,
             });
         }
 
-        const recipientEmail = req.user.email;
-        const officerName = req.user.name || 'Safety Officer';
+        const { driverId } = req.body || {};
+        let alertsToSend = licenseAlerts;
 
-        let html = `
-            <h2>Driver License Expiry Compliance Summary</h2>
-            <p>Hello ${officerName},</p>
-            <p>This is a manual compliance reminder listing drivers with expired or expiring licenses (within 30 days):</p>
-            <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border-color: #e2e8f0; font-family: sans-serif;">
-                <thead>
-                    <tr style="background-color: #f8fafc; text-align: left;">
-                        <th>Driver Name</th>
-                        <th>License Number</th>
-                        <th>Expiry Date</th>
-                        <th>Days Remaining</th>
-                        <th>Severity</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        if (driverId) {
+            alertsToSend = licenseAlerts.filter((a) => a.driverId === driverId);
+            if (alertsToSend.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'No active license alert found for this driver.',
+                });
+            }
+        }
 
-        let text = `Driver License Expiry Compliance Summary\n\nHello ${officerName},\n\nThis is a manual compliance reminder listing drivers with expired or expiring licenses (within 30 days):\n\n`;
+        let sent = 0;
+        let failed = 0;
 
-        licenseAlerts.forEach((alert) => {
-            const formattedDate = new Date(alert.licenseExpiryDate).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-            });
-            const severityColor = alert.severity === 'expired' ? '#E0504A' : '#EAA220';
+        for (const alert of alertsToSend) {
+            try {
+                const formattedDate = new Date(alert.licenseExpiryDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                });
 
-            html += `
-                <tr>
-                    <td><strong>${alert.driverName}</strong></td>
-                    <td style="font-family: monospace;">${alert.licenseNumber}</td>
-                    <td>${formattedDate}</td>
-                    <td>${alert.severity === 'expired' ? 'Expired' : `${alert.daysRemaining} days`}</td>
-                    <td><span style="color: ${severityColor}; font-weight: bold; text-transform: uppercase;">${alert.severity}</span></td>
-                </tr>
-            `;
+                let emailHtml;
+                let emailText;
 
-            text += `- Driver: ${alert.driverName}\n  License No: ${alert.licenseNumber}\n  Expiry Date: ${formattedDate}\n  Days Remaining: ${alert.severity === 'expired' ? 'Expired' : alert.daysRemaining}\n  Severity: ${alert.severity.toUpperCase()}\n\n`;
-        });
+                if (alert.severity === 'expired') {
+                    emailHtml = `
+                        <p>Hi ${alert.driverName},</p>
+                        <p>Your license (${alert.licenseNumber}) has expired. Please renew promptly.</p>
+                    `;
+                    emailText = `Hi ${alert.driverName},\n\nYour license (${alert.licenseNumber}) has expired. Please renew promptly.`;
+                } else {
+                    emailHtml = `
+                        <p>Hi ${alert.driverName},</p>
+                        <p>Your license (${alert.licenseNumber}) expires on ${formattedDate} (${alert.daysRemaining} days remaining). Please renew promptly.</p>
+                    `;
+                    emailText = `Hi ${alert.driverName},\n\nYour license (${alert.licenseNumber}) expires on ${formattedDate} (${alert.daysRemaining} days remaining). Please renew promptly.`;
+                }
 
-        html += `
-                </tbody>
-            </table>
-            <p style="margin-top: 20px; font-size: 12px; color: #7b8fad;">Generated manually by TransitOps Compliance Notification Panel.</p>
-        `;
-
-        await sendEmail({
-            to: recipientEmail,
-            subject: `[TransitOps] Compliance Alert: ${licenseAlerts.length} Driver Licenses Expired or Expiring Soon`,
-            html,
-            text,
-        });
+                await sendEmail({
+                    to: alert.driverEmail,
+                    subject: alert.severity === 'expired' ? '[TransitOps] Urgent: License Expired' : '[TransitOps] License Expiry Warning',
+                    html: emailHtml,
+                    text: emailText,
+                });
+                sent++;
+            } catch (err) {
+                console.error(`Failed to send email to driver ${alert.driverName} (${alert.driverEmail}):`, err);
+                failed++;
+            }
+        }
 
         res.status(200).json({
             success: true,
-            message: `Summary email successfully sent to ${recipientEmail}`,
-            count: licenseAlerts.length,
+            sent,
+            failed,
+            message: `Compliance email reminders processed: ${sent} sent, ${failed} failed.`,
         });
     } catch (err) {
         next(err);
