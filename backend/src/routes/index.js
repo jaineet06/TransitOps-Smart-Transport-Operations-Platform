@@ -8,6 +8,7 @@ import fuelLogRoutes from './fuelLog.routes.js';
 import expenseRoutes from './expense.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = Router();
 
@@ -20,5 +21,7 @@ router.use('/fuel-logs', fuelLogRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/notifications', notificationRoutes);
 
 export default router;
+
