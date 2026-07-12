@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, CheckCircle, Send, XCircle } from 'lucide-react';
+import { Plus, CheckCircle, Send, XCircle, LayoutGrid, List } from 'lucide-react';
 import { tripsApi } from '../../api/trips.api';
 import { vehiclesApi } from '../../api/vehicles.api';
 import { driversApi } from '../../api/drivers.api';
@@ -314,6 +314,120 @@ function TripActions({ row, canWrite, onDispatch, onComplete, onCancel }) {
   );
 }
 
+// ── TripCard Component ───────────────────────────────────────────────────────
+function TripCard({ trip, canWrite, onDragStart, onDispatch, onComplete, onCancel }) {
+  const statusColor = TRIP_STATUS_COLORS[trip.status];
+
+  const getETA = (trip) => {
+    if (trip.status === 'Draft') {
+      return `Est. Transit: ~${Math.round(trip.plannedDistance / 60)} hrs`;
+    }
+    if (trip.status === 'Dispatched' && trip.dispatchedAt) {
+      const dispatchTime = new Date(trip.dispatchedAt).getTime();
+      const transitMs = (trip.plannedDistance / 60) * 3600 * 1000;
+      const etaDate = new Date(dispatchTime + transitMs);
+      return `ETA: ${etaDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${etaDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    if (trip.status === 'Completed' && trip.completedAt) {
+      return `Completed: ${formatDate(trip.completedAt)}`;
+    }
+    if (trip.status === 'Cancelled' && trip.cancelledAt) {
+      return `Cancelled: ${formatDate(trip.cancelledAt)}`;
+    }
+    return `Transit: ~${Math.round(trip.plannedDistance / 60)} hrs`;
+  };
+
+  return (
+    <div
+      draggable={canWrite && (trip.status === 'Draft' || trip.status === 'Dispatched')}
+      onDragStart={(e) => onDragStart(e, trip)}
+      className={cn(
+        "bg-base-900 border border-base-700 rounded-lg p-3 space-y-2 select-none shadow-sm transition-all duration-150",
+        canWrite && (trip.status === 'Draft' || trip.status === 'Dispatched') ? "cursor-grab active:cursor-grabbing hover:border-accent/40" : "cursor-default"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-2xs text-ink-subtle">
+          ID: {trip.id.substring(0, 8)}...
+        </span>
+        {canWrite && (trip.status === 'Draft' || trip.status === 'Dispatched') && (
+          <div className="text-ink-subtle group hover:text-accent">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs text-ink font-semibold flex items-center gap-1.5 flex-wrap">
+          <span>{trip.source}</span>
+          <span className="text-ink-subtle">→</span>
+          <span>{trip.destination}</span>
+        </p>
+      </div>
+
+      <div className="space-y-1 text-2xs text-ink-muted border-t border-base-800 pt-2">
+        <div className="flex justify-between">
+          <span>Vehicle:</span>
+          <span className="font-mono text-ink font-medium">{trip.vehicle?.name || '—'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Driver:</span>
+          <span className="text-ink font-medium">{trip.driver?.name || '—'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Cargo Weight:</span>
+          <span className="font-mono text-ink font-medium">{formatNumber(trip.cargoWeight, 2)} t</span>
+        </div>
+        <div className="flex justify-between text-accent font-semibold pt-0.5">
+          <span>{trip.status === 'Draft' ? 'Est. Duration' : trip.status === 'Dispatched' ? 'ETA' : 'Timeline'}:</span>
+          <span className="text-right">{getETA(trip)}</span>
+        </div>
+      </div>
+
+      {canWrite && (trip.status === 'Draft' || trip.status === 'Dispatched') && (
+        <div className="mt-2 pt-2 border-t border-base-800 flex justify-end gap-1">
+          {trip.status === 'Draft' && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDispatch(trip); }}
+                className="text-3xs px-2 py-1 rounded bg-status-dispatched-bg text-status-dispatched border border-status-dispatched/20 font-medium hover:bg-status-dispatched/20 transition-colors"
+              >
+                Dispatch
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onCancel(trip); }}
+                className="text-3xs px-2 py-1 rounded bg-status-cancelled-bg text-status-cancelled border border-status-cancelled/20 font-medium hover:bg-status-cancelled/20 transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+          {trip.status === 'Dispatched' && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onComplete(trip); }}
+                className="text-3xs px-2 py-1 rounded bg-status-completed-bg text-status-completed border border-status-completed/20 font-medium hover:bg-status-completed/20 transition-colors"
+              >
+                Complete
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onCancel(trip); }}
+                className="text-3xs px-2 py-1 rounded bg-status-cancelled-bg text-status-cancelled border border-status-cancelled/20 font-medium hover:bg-status-cancelled/20 transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const TRIP_STATUS_OPTIONS = Object.values(TripStatus);
 
@@ -329,6 +443,8 @@ export default function TripsPage() {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState('list');
+  const [dragOverCol, setDragOverCol] = useState(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [completeTrip, setCompleteTrip] = useState(null);
@@ -432,6 +548,59 @@ export default function TripsPage() {
     ),
   };
 
+  // Drag and drop mechanics
+  const handleDragStart = (e, trip) => {
+    e.dataTransfer.setData('text/plain', trip.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, status) => {
+    e.preventDefault();
+    if (dragOverCol !== status) {
+      setDragOverCol(status);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    setDragOverCol(null);
+  };
+
+  const handleDrop = (e, targetStatus) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    const tripId = e.dataTransfer.getData('text/plain');
+    const trip = rows.find((r) => r.id === tripId);
+    if (!trip) return;
+
+    if (!canWrite) {
+      toast.error('You do not have permission to dispatch or edit trips.');
+      return;
+    }
+
+    if (trip.status === targetStatus) return;
+
+    const VALID_TRANSITIONS = {
+      Draft: ['Dispatched', 'Cancelled'],
+      Dispatched: ['Completed', 'Cancelled'],
+      Completed: [],
+      Cancelled: [],
+    };
+
+    const allowed = VALID_TRANSITIONS[trip.status] || [];
+    if (!allowed.includes(targetStatus)) {
+      toast.error(`Invalid transition: Cannot move trip directly from ${trip.status} to ${targetStatus}`);
+      return;
+    }
+
+    if (targetStatus === 'Dispatched') {
+      handleDispatch(trip);
+    } else if (targetStatus === 'Cancelled') {
+      handleCancel(trip);
+    } else if (targetStatus === 'Completed') {
+      setCompleteTrip(trip);
+    }
+  };
+
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Header */}
@@ -449,61 +618,175 @@ export default function TripsPage() {
         )}
       </div>
 
-      {/* Status filter pills */}
-      <div className="flex gap-1 flex-wrap">
-        <button
-          onClick={() => { setFilterStatus(''); setPage(1); }}
-          className={cn(
-            'px-3 py-1 rounded text-xs font-medium transition-colors',
-            !filterStatus ? 'bg-accent text-white' : 'bg-base-800 text-ink-muted hover:text-ink',
-          )}
-          id="trip-filter-all"
-        >
-          All
-        </button>
-        {TRIP_STATUS_OPTIONS.map((s) => (
+      {/* Filters and Toggle */}
+      <div className="flex justify-between items-center flex-wrap gap-3">
+        {/* Status filter pills */}
+        <div className="flex gap-1 flex-wrap">
           <button
-            key={s}
-            onClick={() => { setFilterStatus(s); setPage(1); }}
+            onClick={() => { setFilterStatus(''); setPage(1); }}
             className={cn(
               'px-3 py-1 rounded text-xs font-medium transition-colors',
-              filterStatus === s
-                ? cn(TRIP_STATUS_COLORS[s]?.bg, TRIP_STATUS_COLORS[s]?.text)
-                : 'bg-base-800 text-ink-muted hover:text-ink',
+              !filterStatus ? 'bg-accent text-white' : 'bg-base-800 text-ink-muted hover:text-ink',
             )}
-            id={`trip-filter-${s.toLowerCase()}`}
+            id="trip-filter-all"
           >
-            {s}
+            All
           </button>
-        ))}
+          {TRIP_STATUS_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => { setFilterStatus(s); setPage(1); }}
+              className={cn(
+                'px-3 py-1 rounded text-xs font-medium transition-colors',
+                filterStatus === s
+                  ? cn(TRIP_STATUS_COLORS[s]?.bg, TRIP_STATUS_COLORS[s]?.text)
+                  : 'bg-base-800 text-ink-muted hover:text-ink',
+              )}
+              id={`trip-filter-${s.toLowerCase()}`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center border border-base-700 rounded h-8 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={cn(
+              "px-3 h-full flex items-center gap-1 text-xs transition-colors font-medium",
+              viewMode === 'list' ? "bg-base-700 text-ink" : "text-ink-subtle hover:text-ink hover:bg-base-800"
+            )}
+            title="List View"
+            id="trip-view-list"
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>List</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('kanban')}
+            className={cn(
+              "px-3 h-full flex items-center gap-1 text-xs transition-colors font-medium",
+              viewMode === 'kanban' ? "bg-base-700 text-ink" : "text-ink-subtle hover:text-ink hover:bg-base-800"
+            )}
+            title="Kanban Board"
+            id="trip-view-kanban"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Kanban</span>
+          </button>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-base-900 border border-base-700 rounded-lg overflow-hidden">
-        <Table
-          columns={[...COLUMNS, actionColumn]}
-          rows={rows}
-          loading={loading}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-          emptyMessage="No trips match your filters."
-          skeletonRows={8}
-        />
-        {!loading && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-base-700">
-            <p className="text-xs text-ink-muted">
-              Page {pagination.page} of {pagination.totalPages} — {pagination.total} total
-            </p>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)} id="trip-prev-page">Previous</Button>
-              <Button variant="secondary" size="sm" disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)} id="trip-next-page">Next</Button>
+      {/* Table / Kanban Grid */}
+      {viewMode === 'list' ? (
+        <div className="bg-base-900 border border-base-700 rounded-lg overflow-hidden">
+          <Table
+            columns={[...COLUMNS, actionColumn]}
+            rows={rows}
+            loading={loading}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            emptyMessage="No trips match your filters."
+            skeletonRows={8}
+          />
+          {!loading && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-base-700">
+              <p className="text-xs text-ink-muted">
+                Page {pagination.page} of {pagination.totalPages} — {pagination.total} total
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)} id="trip-prev-page">Previous</Button>
+                <Button variant="secondary" size="sm" disabled={page >= pagination.totalPages}
+                  onClick={() => setPage((p) => p + 1)} id="trip-next-page">Next</Button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {TRIP_STATUS_OPTIONS.map((status) => (
+                <div key={status} className="bg-base-900 border border-base-700 rounded-lg p-3 space-y-3">
+                  <div className="h-5 w-24 bg-base-800 rounded animate-pulse" />
+                  <div className="h-28 bg-base-950 border border-base-800 rounded animate-pulse" />
+                  <div className="h-28 bg-base-950 border border-base-800 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+              {TRIP_STATUS_OPTIONS.map((status) => {
+                const colTrips = rows.filter((r) => r.status === status);
+                const colorConfig = TRIP_STATUS_COLORS[status];
+                const isOver = dragOverCol === status;
+
+                return (
+                  <div
+                    key={status}
+                    onDragOver={(e) => handleDragOver(e, status)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, status)}
+                    className={cn(
+                      "bg-base-950 border border-base-700 rounded-lg p-3 flex flex-col gap-3 min-h-[500px] transition-all duration-150",
+                      isOver ? "border-accent bg-accent-muted/10 shadow-md scale-[1.01]" : ""
+                    )}
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-base-800">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("w-2.5 h-2.5 rounded-full", colorConfig?.dot)} />
+                        <span className="font-semibold text-ink text-sm">{status}</span>
+                      </div>
+                      <span className="text-2xs bg-base-800 text-ink-muted font-mono font-medium px-2 py-0.5 rounded-full">
+                        {colTrips.length}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 flex flex-col gap-2 overflow-y-auto max-h-[600px] pr-1">
+                      {colTrips.length === 0 ? (
+                        <div className="flex-1 flex items-center justify-center min-h-[100px] text-center border-2 border-dashed border-base-800 rounded-lg p-4">
+                          <p className="text-2xs text-ink-subtle italic">No trips</p>
+                        </div>
+                      ) : (
+                        colTrips.map((trip) => (
+                          <TripCard
+                            key={trip.id}
+                            trip={trip}
+                            canWrite={canWrite}
+                            onDragStart={handleDragStart}
+                            onDispatch={handleDispatch}
+                            onComplete={(row) => setCompleteTrip(row)}
+                            onCancel={handleCancel}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!loading && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-base-900 border border-base-700 rounded-lg">
+              <p className="text-xs text-ink-muted">
+                Page {pagination.page} of {pagination.totalPages} — {pagination.total} total
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)} id="trip-kanban-prev-page">Previous</Button>
+                <Button variant="secondary" size="sm" disabled={page >= pagination.totalPages}
+                  onClick={() => setPage((p) => p + 1)} id="trip-kanban-next-page">Next</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Create Modal */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create New Trip" size="lg">

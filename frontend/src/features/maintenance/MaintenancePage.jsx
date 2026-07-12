@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Check } from 'lucide-react';
+import { Plus, Check, LayoutGrid, List, Calendar, ChevronLeft, ChevronRight, Wrench } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 import { maintenanceApi } from '../../api/maintenance.api';
 import { vehiclesApi } from '../../api/vehicles.api';
 
-import { extractError, formatCurrency, formatDate, zodErrorMap } from '../../lib/utils';
+import { cn, extractError, formatCurrency, formatDate, zodErrorMap } from '../../lib/utils';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
 import Skeleton from '../../components/ui/Skeleton';
@@ -32,6 +32,291 @@ const STATUS_COLORS = {
   Active: { bg: 'bg-status-inshop-bg', text: 'text-status-inshop', dot: 'bg-status-inshop' },
   Closed: { bg: 'bg-status-available-bg', text: 'text-status-available', dot: 'bg-status-available' },
 };
+
+// ── MaintenanceDetailsModal Component ────────────────────────────────────────
+function MaintenanceDetailsModal({ log, onClose, canWrite, handleCloseLog, actionLoading }) {
+  if (!log) return null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 border-b border-base-800 pb-4 text-xs">
+        <div>
+          <span className="text-ink-subtle block uppercase tracking-wider font-semibold text-3xs">Vehicle</span>
+          <span className="font-medium text-ink text-sm block mt-0.5">{log.vehicle?.name || '—'}</span>
+          <span className="font-mono text-ink-muted text-xs">{log.vehicle?.registrationNumber}</span>
+        </div>
+        <div>
+          <span className="text-ink-subtle block uppercase tracking-wider font-semibold text-3xs">Status</span>
+          <div className="mt-1">
+            <span className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-2xs font-semibold uppercase tracking-wider border",
+              log.status === 'Active' ? 'bg-status-inshop-bg text-status-inshop border-status-inshop/20' : 'bg-status-available-bg text-status-available border-status-available/20'
+            )}>
+              <span className={cn("w-1.5 h-1.5 rounded-full", log.status === 'Active' ? 'bg-status-inshop' : 'bg-status-available')} />
+              {log.status}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <span className="text-ink-subtle block uppercase tracking-wider font-semibold text-3xs">Description / Work Details</span>
+        <p className="text-sm text-ink bg-base-950 border border-base-800 p-3 rounded leading-relaxed whitespace-pre-wrap">
+          {log.description}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 text-xs pt-2">
+        <div>
+          <span className="text-ink-subtle block uppercase tracking-wider font-semibold text-3xs">Cost</span>
+          <span className="font-mono text-ink font-semibold text-sm block mt-0.5">{formatCurrency(log.cost)}</span>
+        </div>
+        <div>
+          <span className="text-ink-subtle block uppercase tracking-wider font-semibold text-3xs">Start Date</span>
+          <span className="font-medium text-ink block mt-0.5">{formatDate(log.startDate)}</span>
+        </div>
+        <div>
+          <span className="text-ink-subtle block uppercase tracking-wider font-semibold text-3xs">End Date</span>
+          <span className="font-medium text-ink block mt-0.5">{log.endDate ? formatDate(log.endDate) : '—'}</span>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4 border-t border-base-800">
+        <Button variant="ghost" onClick={onClose}>Close Window</Button>
+        {log.status === 'Active' && canWrite && (
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await handleCloseLog(log.id);
+              onClose();
+            }}
+            loading={actionLoading === log.id}
+          >
+            <Check className="w-4 h-4 mr-1.5" /> Close Log
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── MaintenanceCard Component ────────────────────────────────────────────────
+function MaintenanceCard({ log, canWrite, handleCloseLog, actionLoading, onClick }) {
+  const isCloseActive = log.status === 'Active' && canWrite;
+
+  return (
+    <div
+      onClick={onClick}
+      className="bg-base-900 border border-base-700 hover:border-accent/40 rounded-lg p-4 flex flex-col justify-between cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
+    >
+      <div className="space-y-3">
+        <div className="flex items-start justify-between">
+          <div className="w-10 h-10 rounded-lg bg-base-800 border border-base-700 flex items-center justify-center text-ink-subtle group-hover:text-accent transition-colors duration-150">
+            <Wrench className="w-5 h-5" />
+          </div>
+          <Badge
+            label={log.status}
+            colorConfig={
+              log.status === 'Active'
+                ? { bg: 'bg-status-inshop-bg', text: 'text-status-inshop', dot: 'bg-status-inshop' }
+                : { bg: 'bg-status-available-bg', text: 'text-status-available', dot: 'bg-status-available' }
+            }
+          />
+        </div>
+
+        <div>
+          <span className="font-mono text-2xs font-semibold text-ink-subtle uppercase tracking-wider block">
+            {log.vehicle?.registrationNumber}
+          </span>
+          <h4 className="font-semibold text-ink text-sm mt-0.5 leading-tight group-hover:text-accent transition-colors duration-150">
+            {log.vehicle?.name || '—'}
+          </h4>
+        </div>
+
+        <p className="text-xs text-ink-muted line-clamp-2 min-h-8">
+          {log.description}
+        </p>
+
+        <div className="grid grid-cols-2 gap-y-2 gap-x-3 pt-2 text-2xs border-t border-base-800">
+          <div>
+            <span className="text-3xs text-ink-subtle block uppercase tracking-wide">Cost</span>
+            <span className="font-mono text-ink font-semibold">{formatCurrency(log.cost)}</span>
+          </div>
+          <div>
+            <span className="text-3xs text-ink-subtle block uppercase tracking-wide">Timeline</span>
+            <span className="text-ink font-medium">
+              {formatDate(log.startDate)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {isCloseActive && (
+        <div className="mt-3 pt-2 border-t border-base-800 flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCloseLog(log.id);
+            }}
+            loading={actionLoading === log.id}
+            className="text-xs px-2.5 py-1 h-7"
+          >
+            Close Log
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── MaintenanceCalendar Component ────────────────────────────────────────────
+function MaintenanceCalendar({ rows, onEventClick }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const prevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const calendarCells = [];
+
+  for (let i = firstDayIndex - 1; i >= 0; i--) {
+    calendarCells.push({
+      day: prevMonthDays - i,
+      monthType: 'prev',
+      date: new Date(year, month - 1, prevMonthDays - i)
+    });
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    calendarCells.push({
+      day: i,
+      monthType: 'current',
+      date: new Date(year, month, i)
+    });
+  }
+
+  const totalSlots = 42; 
+  const nextMonthPadding = totalSlots - calendarCells.length;
+  for (let i = 1; i <= nextMonthPadding; i++) {
+    calendarCells.push({
+      day: i,
+      monthType: 'next',
+      date: new Date(year, month + 1, i)
+    });
+  }
+
+  const getLogsForDate = (cellDate) => {
+    return rows.filter((log) => {
+      const start = new Date(log.startDate);
+      const cell = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
+      const startDateOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+
+      let endDateOnly;
+      if (log.endDate) {
+        const end = new Date(log.endDate);
+        endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      } else {
+        const today = new Date();
+        endDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      }
+
+      return cell >= startDateOnly && cell <= endDateOnly;
+    });
+  };
+
+  return (
+    <div className="bg-base-900 border border-base-700 rounded-lg p-4 space-y-4">
+      <div className="flex items-center justify-between pb-2 border-b border-base-800">
+        <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">
+          {monthNames[month]} {year}
+        </h3>
+        <div className="flex items-center gap-1.5">
+          <Button variant="secondary" size="sm" onClick={prevMonth} className="px-1.5 h-8">
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setCurrentDate(new Date())} className="text-xs h-8">
+            Today
+          </Button>
+          <Button variant="secondary" size="sm" onClick={nextMonth} className="px-1.5 h-8">
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 text-center font-semibold text-2xs uppercase tracking-wider text-ink-subtle">
+        {weekdays.map(d => <div key={d} className="py-1">{d}</div>)}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 bg-base-850 border border-base-800 rounded overflow-hidden">
+        {calendarCells.map((cell, idx) => {
+          const dateLogs = getLogsForDate(cell.date);
+          const isToday = new Date().toDateString() === cell.date.toDateString();
+
+          return (
+            <div
+              key={idx}
+              className={cn(
+                "min-h-[90px] p-1.5 flex flex-col justify-between border border-base-800/40 bg-base-900/90",
+                cell.monthType !== 'current' ? "opacity-35 bg-base-950/20" : "",
+                isToday ? "ring-1 ring-accent/30 bg-accent-muted/5" : ""
+              )}
+            >
+              <div className="flex justify-between items-center mb-1">
+                <span className={cn(
+                  "text-2xs font-mono font-medium rounded-full w-5 h-5 flex items-center justify-center",
+                  isToday ? "bg-accent text-white font-bold" : "text-ink-muted"
+                )}>
+                  {cell.day}
+                </span>
+              </div>
+
+              <div className="flex-1 flex flex-col gap-1 overflow-y-auto max-h-[70px] pr-0.5">
+                {dateLogs.map((log) => {
+                  const isActive = log.status === 'Active';
+                  return (
+                    <button
+                      key={log.id}
+                      onClick={() => onEventClick(log)}
+                      title={`${log.vehicle?.name}: ${log.description}`}
+                      className={cn(
+                        "text-[9px] px-1.5 py-0.5 rounded border text-left truncate leading-tight font-medium font-sans uppercase tracking-wide block w-full transition-colors",
+                        isActive
+                          ? "bg-status-inshop-bg text-status-inshop border-status-inshop/20 hover:bg-status-inshop/15"
+                          : "bg-status-available-bg text-status-available border-status-available/20 hover:bg-status-available/15"
+                      )}
+                    >
+                      {log.vehicle?.name || 'V'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Form Component ──────────────────────────────────────────────────────────
 function MaintenanceForm({ onSave, onCancel, loading }) {
@@ -168,6 +453,8 @@ export default function MaintenancePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [viewMode, setViewMode] = useState('list');
+  const [detailsLog, setDetailsLog] = useState(null);
 
   const fetchRef = useRef(0);
 
@@ -415,13 +702,13 @@ export default function MaintenancePage() {
       {/* Filters and List */}
       <div className="bg-base-900 border border-base-700 rounded-lg overflow-hidden">
         {/* Filter Toolbar */}
-        <div className="p-4 border-b border-base-700 flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 flex gap-3">
+        <div className="p-4 border-b border-base-700 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="flex-1 flex flex-wrap gap-3">
             <Select
               id="filter-vehicle"
               value={filterVehicle}
               onChange={(e) => { setFilterVehicle(e.target.value); setPage(1); }}
-              containerClassName="flex-1 max-w-xs"
+              containerClassName="w-full sm:max-w-xs"
             >
               <option value="">All Vehicles</option>
               {vehicles.map((v) => (
@@ -442,44 +729,154 @@ export default function MaintenancePage() {
               <option value="Closed">Closed</option>
             </Select>
           </div>
+
+          <div className="flex items-center border border-base-700 rounded h-8 overflow-hidden shrink-0">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                "px-2.5 h-full flex items-center justify-center transition-colors",
+                viewMode === 'list' ? "bg-base-700 text-ink" : "text-ink-subtle hover:text-ink hover:bg-base-800"
+              )}
+              title="Table View"
+              id="maintenance-view-list"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                "px-2.5 h-full flex items-center justify-center transition-colors",
+                viewMode === 'grid' ? "bg-base-700 text-ink" : "text-ink-subtle hover:text-ink hover:bg-base-800"
+              )}
+              title="Grid/Card View"
+              id="maintenance-view-grid"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('calendar')}
+              className={cn(
+                "px-2.5 h-full flex items-center justify-center transition-colors",
+                viewMode === 'calendar' ? "bg-base-700 text-ink" : "text-ink-subtle hover:text-ink hover:bg-base-800"
+              )}
+              title="Calendar View"
+              id="maintenance-view-calendar"
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Table */}
-        <Table
-          columns={COLUMNS}
-          rows={rows}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-          loading={loading}
-          emptyMessage="No maintenance logs found matching the selected filters."
-        />
+        {/* Table / Grid / Calendar */}
+        {viewMode === 'list' && (
+          <>
+            <Table
+              columns={COLUMNS}
+              rows={rows}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              loading={loading}
+              emptyMessage="No maintenance logs found matching the selected filters."
+            />
 
-        {/* Pagination Footer */}
-        {pagination.totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-base-700 flex items-center justify-between">
-            <p className="text-xs text-ink-muted">
-              Showing <span className="font-semibold text-ink">{rows.length}</span> of{' '}
-              <span className="font-semibold text-ink">{pagination.total}</span> logs
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
+            {!loading && pagination.totalPages > 1 && (
+              <div className="px-4 py-3 border-t border-base-700 flex items-center justify-between">
+                <p className="text-xs text-ink-muted">
+                  Showing <span className="font-semibold text-ink">{rows.length}</span> of{' '}
+                  <span className="font-semibold text-ink">{pagination.total}</span> logs
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === pagination.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {viewMode === 'grid' && (
+          <div className="p-4 border-t border-base-700 bg-base-950/20 space-y-4">
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-base-900 border border-base-700 rounded-lg p-4 space-y-4 animate-pulse">
+                    <div className="flex justify-between items-start">
+                      <div className="w-10 h-10 rounded bg-base-800" />
+                      <div className="w-16 h-5 rounded bg-base-800" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3.5 w-24 bg-base-800 rounded" />
+                      <div className="h-5 w-36 bg-base-800 rounded" />
+                    </div>
+                    <div className="h-10 w-full bg-base-800 rounded pt-2" />
+                  </div>
+                ))}
+              </div>
+            ) : rows.length === 0 ? (
+              <div className="bg-base-900 border border-base-700 rounded-lg p-12 text-center">
+                <p className="text-ink-muted">No maintenance logs found matching the selected filters.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rows.map((row) => (
+                  <MaintenanceCard
+                    key={row.id}
+                    log={row}
+                    canWrite={canWrite}
+                    handleCloseLog={handleCloseLog}
+                    actionLoading={actionLoading}
+                    onClick={() => setDetailsLog(row)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {!loading && pagination.totalPages > 1 && (
+              <div className="px-4 py-3 bg-base-900 border border-base-700 rounded-lg flex items-center justify-between">
+                <p className="text-xs text-ink-muted">
+                  Showing <span className="font-semibold text-ink">{rows.length}</span> of{' '}
+                  <span className="font-semibold text-ink">{pagination.total}</span> logs
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+                    Previous
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={page === pagination.totalPages} onClick={() => setPage((p) => p + 1)}>
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {viewMode === 'calendar' && (
+          <div className="p-4 border-t border-base-700 bg-base-950/20">
+            {loading ? (
+              <div className="bg-base-900 border border-base-700 rounded-lg p-12 text-center animate-pulse">
+                <p className="text-ink-muted">Loading calendar view...</p>
+              </div>
+            ) : (
+              <MaintenanceCalendar rows={rows} onEventClick={(log) => setDetailsLog(log)} />
+            )}
           </div>
         )}
       </div>
@@ -490,6 +887,17 @@ export default function MaintenancePage() {
           onSave={handleSave}
           onCancel={() => setModalOpen(false)}
           loading={saving}
+        />
+      </Modal>
+
+      {/* Details Modal */}
+      <Modal open={!!detailsLog} onClose={() => setDetailsLog(null)} title="Maintenance Record Details" size="md">
+        <MaintenanceDetailsModal
+          log={detailsLog}
+          onClose={() => setDetailsLog(null)}
+          canWrite={canWrite}
+          handleCloseLog={handleCloseLog}
+          actionLoading={actionLoading}
         />
       </Modal>
     </div>

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, LayoutGrid, List } from 'lucide-react';
 import { vehiclesApi } from '../../api/vehicles.api';
 import { VehicleStatus, VEHICLE_STATUS_COLORS } from '../../lib/constants';
-import { extractError, formatCurrency, formatNumber, zodErrorMap } from '../../lib/utils';
+import { cn, extractError, formatCurrency, formatNumber, zodErrorMap } from '../../lib/utils';
 import useAuthStore from '../../store/authStore';
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
@@ -126,6 +126,72 @@ function VehicleForm({ initial, onSave, onCancel, loading }) {
   );
 }
 
+// ── VehicleCard Component ───────────────────────────────────────────────────
+function VehicleCard({ vehicle, canWrite, onEdit }) {
+  const statusColor = VEHICLE_STATUS_COLORS[vehicle.status] || VEHICLE_STATUS_COLORS.Available;
+
+  return (
+    <div
+      onClick={() => onEdit(vehicle)}
+      className="bg-base-900 border border-base-700 hover:border-accent/40 rounded-lg p-4 flex flex-col justify-between cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
+    >
+      <div className="space-y-3">
+        <div className="flex items-start justify-between">
+          <div className="w-10 h-10 rounded-lg bg-base-800 border border-base-700 flex items-center justify-center text-ink-subtle group-hover:text-accent transition-colors duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-5.14a1 1 0 0 0-.29-.71l-4.4-4.4a1 1 0 0 0-.7-.29H14"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="16.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <Badge label={vehicle.status} colorConfig={statusColor} />
+        </div>
+
+        <div>
+          <span className="font-mono text-2xs font-semibold text-ink-subtle uppercase tracking-wider block">
+            {vehicle.registrationNumber}
+          </span>
+          <h4 className="font-semibold text-ink text-sm mt-0.5 leading-tight group-hover:text-accent transition-colors duration-150">
+            {vehicle.name}
+          </h4>
+          <span className="text-xs text-ink-muted">{vehicle.model}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-y-2 gap-x-3 pt-2 text-2xs border-t border-base-800">
+          <div>
+            <span className="text-3xs text-ink-subtle block uppercase tracking-wide">Type</span>
+            <span className="text-ink font-medium">{vehicle.type}</span>
+          </div>
+          <div>
+            <span className="text-3xs text-ink-subtle block uppercase tracking-wide">Odometer</span>
+            <span className="font-mono text-ink font-medium">{formatNumber(vehicle.odometer, 1)} km</span>
+          </div>
+          <div>
+            <span className="text-3xs text-ink-subtle block uppercase tracking-wide">Capacity</span>
+            <span className="font-mono text-ink font-medium">{formatNumber(vehicle.maxLoadCapacity, 2)} t</span>
+          </div>
+          <div>
+            <span className="text-3xs text-ink-subtle block uppercase tracking-wide">Acq. Cost</span>
+            <span className="font-mono text-ink font-medium">{formatCurrency(vehicle.acquisitionCost)}</span>
+          </div>
+        </div>
+      </div>
+
+      {canWrite && (
+        <div className="mt-3 pt-2 border-t border-base-800 flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(vehicle);
+            }}
+            className="opacity-90 group-hover:opacity-100 group-hover:bg-base-800 text-xs px-2.5 py-1 h-7"
+          >
+            Edit
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function VehiclesPage() {
   const role = useAuthStore((s) => s.user?.role);
@@ -141,6 +207,7 @@ export default function VehiclesPage() {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState('list');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -270,34 +337,115 @@ export default function VehiclesPage() {
           onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
           id="vehicle-filter-type"
         />
+
+        <div className="flex items-center border border-base-700 rounded h-8 overflow-hidden ml-auto">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={cn(
+              "px-2.5 h-full flex items-center justify-center transition-colors",
+              viewMode === 'list' ? "bg-base-700 text-ink" : "text-ink-subtle hover:text-ink hover:bg-base-800"
+            )}
+            title="List View"
+            id="vehicle-view-list"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={cn(
+              "px-2.5 h-full flex items-center justify-center transition-colors",
+              viewMode === 'grid' ? "bg-base-700 text-ink" : "text-ink-subtle hover:text-ink hover:bg-base-800"
+            )}
+            title="Grid View"
+            id="vehicle-view-grid"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-base-900 border border-base-700 rounded-lg overflow-hidden">
-        <Table
-          columns={[...COLUMNS, ...actionColumn]}
-          rows={displayRows}
-          loading={loading}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-          emptyMessage="No vehicles match your filters."
-          skeletonRows={8}
-        />
-        {!loading && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-base-700">
-            <p className="text-xs text-ink-muted">
-              Page {pagination.page} of {pagination.totalPages} — {pagination.total} total
-            </p>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)} id="vehicle-prev-page">Previous</Button>
-              <Button variant="secondary" size="sm" disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)} id="vehicle-next-page">Next</Button>
+      {/* Table / Grid */}
+      {viewMode === 'list' ? (
+        <div className="bg-base-900 border border-base-700 rounded-lg overflow-hidden">
+          <Table
+            columns={[...COLUMNS, ...actionColumn]}
+            rows={displayRows}
+            loading={loading}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            emptyMessage="No vehicles match your filters."
+            skeletonRows={8}
+          />
+          {!loading && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-base-700">
+              <p className="text-xs text-ink-muted">
+                Page {pagination.page} of {pagination.totalPages} — {pagination.total} total
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)} id="vehicle-prev-page">Previous</Button>
+                <Button variant="secondary" size="sm" disabled={page >= pagination.totalPages}
+                  onClick={() => setPage((p) => p + 1)} id="vehicle-next-page">Next</Button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-base-900 border border-base-700 rounded-lg p-4 space-y-4 animate-pulse">
+                  <div className="flex justify-between items-start">
+                    <div className="w-10 h-10 rounded bg-base-800" />
+                    <div className="w-16 h-5 rounded bg-base-800" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-20 bg-base-800 rounded" />
+                    <div className="h-5 w-36 bg-base-800 rounded" />
+                    <div className="h-3.5 w-24 bg-base-800 rounded" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-base-800">
+                    {[...Array(4)].map((_, j) => (
+                      <div key={j} className="space-y-1">
+                        <div className="h-2 w-12 bg-base-800 rounded" />
+                        <div className="h-3.5 w-16 bg-base-800 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : displayRows.length === 0 ? (
+            <div className="bg-base-900 border border-base-700 rounded-lg p-12 text-center">
+              <p className="text-ink-muted">No vehicles match your filters.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {displayRows.map((row) => (
+                <VehicleCard key={row.id} vehicle={row} canWrite={canWrite} onEdit={openEdit} />
+              ))}
+            </div>
+          )}
+
+          {!loading && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-base-900 border border-base-700 rounded-lg">
+              <p className="text-xs text-ink-muted">
+                Page {pagination.page} of {pagination.totalPages} — {pagination.total} total
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)} id="vehicle-grid-prev-page">Previous</Button>
+                <Button variant="secondary" size="sm" disabled={page >= pagination.totalPages}
+                  onClick={() => setPage((p) => p + 1)} id="vehicle-grid-next-page">Next</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal */}
       <Modal open={modalOpen} onClose={closeModal}
