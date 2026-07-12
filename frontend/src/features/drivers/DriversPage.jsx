@@ -16,6 +16,7 @@ import Select from '../../components/ui/Select';
 // ── Validation ───────────────────────────────────────────────────────────────
 const driverSchema = z.object({
   name: z.string().trim().min(1, 'Name is required'),
+  email: z.string().trim().email('Invalid email address'),
   licenseNumber: z.string().trim().min(1, 'License number is required'),
   licenseCategory: z.string().trim().min(1, 'License category is required'),
   licenseExpiryDate: z.string().min(1, 'Expiry date is required').refine(
@@ -66,6 +67,10 @@ const COLUMNS = [
     render: (row) => <span className="font-medium text-ink">{row.name}</span>,
   },
   {
+    key: 'email', label: 'Email', sortable: false,
+    render: (row) => <span className="text-xs text-ink-subtle">{row.email}</span>,
+  },
+  {
     key: 'licenseNumber', label: 'License No.', sortable: false,
     render: (row) => <span className="font-mono text-xs">{row.licenseNumber}</span>,
   },
@@ -103,6 +108,7 @@ function DriverForm({ initial, onSave, onCancel, loading }) {
 
   const [form, setForm] = useState({
     name: initial?.name ?? '',
+    email: initial?.email ?? '',
     licenseNumber: initial?.licenseNumber ?? '',
     licenseCategory: initial?.licenseCategory ?? '',
     licenseExpiryDate: toDateInput(initial?.licenseExpiryDate),
@@ -129,27 +135,33 @@ function DriverForm({ initial, onSave, onCancel, loading }) {
       <div className="grid grid-cols-2 gap-4">
         <Input id="drv-name" label="Full Name" value={form.name}
           onChange={set('name')} error={errors.name} placeholder="Rajesh Kumar" />
-        <Input id="licenseNumber" label="License Number" value={form.licenseNumber}
-          onChange={set('licenseNumber')} error={errors.licenseNumber} placeholder="MH0120210012345" />
+        <Input id="drv-email" label="Email Address" type="email" value={form.email}
+          onChange={set('email')} error={errors.email} placeholder="rajesh@transitops.com" />
       </div>
       <div className="grid grid-cols-2 gap-4">
+        <Input id="licenseNumber" label="License Number" value={form.licenseNumber}
+          onChange={set('licenseNumber')} error={errors.licenseNumber} placeholder="MH0120210012345" />
         <Input id="licenseCategory" label="License Category" value={form.licenseCategory}
           onChange={set('licenseCategory')} error={errors.licenseCategory} placeholder="HMV" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <Input id="licenseExpiryDate" label="License Expiry Date" type="date"
           value={form.licenseExpiryDate} onChange={set('licenseExpiryDate')}
           error={errors.licenseExpiryDate} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
         <Input id="contactNumber" label="Contact Number" value={form.contactNumber}
           onChange={set('contactNumber')} error={errors.contactNumber} placeholder="+91 9876543210" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
         <Input id="safetyScore" label="Safety Score (0–100)" type="number" min="0" max="100"
           value={form.safetyScore} onChange={set('safetyScore')} error={errors.safetyScore} />
+        {isEdit ? (
+          <Select id="drv-status" label="Status" value={form.status} onChange={set('status')}>
+            {DRIVER_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </Select>
+        ) : (
+          <div />
+        )}
       </div>
-      {isEdit && (
-        <Select id="drv-status" label="Status" value={form.status} onChange={set('status')}>
-          {DRIVER_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </Select>
-      )}
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button type="submit" loading={loading}>{isEdit ? 'Save Changes' : 'Register Driver'}</Button>

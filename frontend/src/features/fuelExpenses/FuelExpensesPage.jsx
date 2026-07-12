@@ -19,6 +19,7 @@ import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Skeleton from '../../components/ui/Skeleton';
+import Badge from '../../components/ui/Badge';
 
 // ── Validation ───────────────────────────────────────────────────────────────
 const fuelLogSchema = z.object({
@@ -519,9 +520,14 @@ export default function FuelExpensesPage() {
       label: 'Type',
       sortable: false,
       render: (row) => (
-        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold ${row.type === 'Toll' ? 'bg-accent/10 text-accent' : 'bg-status-retired-bg text-status-retired'}`}>
-          {row.type}
-        </span>
+        <Badge
+          label={row.type}
+          colorConfig={
+            row.type === 'Toll'
+              ? { bg: 'bg-accent/10', text: 'text-accent', dot: 'bg-accent' }
+              : { bg: 'bg-base-700', text: 'text-ink-muted', dot: 'bg-ink-subtle' }
+          }
+        />
       ),
     },
     {

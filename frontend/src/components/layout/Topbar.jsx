@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Sun, Moon, Bell, Mail, AlertTriangle, Loader2 } from 'lucide-react';
+import { LogOut, Sun, Moon, Bell, Mail, Loader2, Check } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { authApi } from '../../api/auth.api';
@@ -14,10 +14,18 @@ export default function Topbar({ title }) {
   const { user, clearAuth } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
 
-  const [notifications, setNotifications] = useState({ licenseAlerts: [], maintenanceAlerts: [], totalCount: 0 });
+  const [notifications, setNotifications] = useState({
+    licenseAlerts: [],
+    maintenanceAlerts: [],
+    tripDelayAlerts: [],
+    utilizationAlerts: [],
+    totalCount: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingEmailFor, setSendingEmailFor] = useState(null);
+  const [sentDrivers, setSentDrivers] = useState(new Set());
 
   const panelRef = useRef(null);
   const isSafetyOfficer = user?.role === 'SafetyOfficer';
@@ -71,7 +79,14 @@ export default function Topbar({ title }) {
     setSendingEmail(true);
     try {
       const { data } = await notificationsApi.sendLicenseReminders();
-      toast.success(data.message || `Summary email sent with ${data.count} drivers!`);
+      toast.success(`Reminders sent to ${data.sent} drivers`);
+      if (notifications.licenseAlerts) {
+        setSentDrivers((prev) => {
+          const next = new Set(prev);
+          notifications.licenseAlerts.forEach((a) => next.add(a.driverId));
+          return next;
+        });
+      }
       fetchNotifications();
     } catch (err) {
       console.error('Failed to send reminders:', err);
@@ -79,6 +94,26 @@ export default function Topbar({ title }) {
       toast.error(errMsg);
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  const handleSendIndividualEmail = async (driverId) => {
+    setSendingEmailFor(driverId);
+    try {
+      await notificationsApi.sendLicenseReminders({ driverId });
+      toast.success('Reminder sent directly to driver');
+      setSentDrivers((prev) => {
+        const next = new Set(prev);
+        next.add(driverId);
+        return next;
+      });
+      fetchNotifications();
+    } catch (err) {
+      console.error('Failed to send reminder:', err);
+      const errMsg = err.response?.data?.error || 'Failed to send reminder';
+      toast.error(errMsg);
+    } finally {
+      setSendingEmailFor(null);
     }
   };
 
@@ -123,7 +158,7 @@ export default function Topbar({ title }) {
               <div className="flex items-center justify-between pb-3 border-b border-base-700 mb-3 shrink-0">
                 <span className="text-sm font-semibold text-ink">Alert Center</span>
                 {notifications.totalCount > 0 && (
-                  <span className="bg-accent/10 text-accent text-2xs font-semibold px-2 py-0.5 rounded-full">
+                  <span className="bg-base-700 text-ink-muted text-2xs font-semibold px-2 py-0.5 rounded-full">
                     {notifications.totalCount} active
                   </span>
                 )}
@@ -137,10 +172,6 @@ export default function Topbar({ title }) {
                       <div className="h-14 w-full skeleton-shimmer" />
                       <div className="h-14 w-full skeleton-shimmer" />
                     </div>
-                    <div className="space-y-2 mt-4">
-                      <div className="h-3 w-24 skeleton-shimmer" />
-                      <div className="h-14 w-full skeleton-shimmer" />
-                    </div>
                   </div>
                 ) : (
                   <>
@@ -148,69 +179,80 @@ export default function Topbar({ title }) {
                     {notifications.licenseAlerts.length > 0 && (
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-2xs font-semibold text-ink-subtle uppercase tracking-wider">License Expiry</h4>
+                          <h4 className="text-[10px] font-semibold text-ink-subtle uppercase tracking-wider">License Expiry</h4>
                           {isSafetyOfficer && (
                             <button
                               onClick={handleSendEmail}
                               disabled={sendingEmail}
-                              className="flex items-center gap-1 text-3xs font-semibold text-accent hover:text-accent-hover transition-colors disabled:opacity-50"
-                              title="Send summary email to yourself"
+                              className="flex items-center gap-1 text-[10px] font-semibold text-ink-muted hover:text-ink transition-colors disabled:opacity-50"
+                              title="Send reminder to all affected drivers"
                             >
-                              {sendingEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
-                              Send Email
+                              {sendingEmail ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Mail className="w-2.5 h-2.5" />}
+                              <span>Send All</span>
                             </button>
                           )}
                         </div>
-                        <div className="space-y-2">
-                          {notifications.licenseAlerts.map(alert => (
-                            <div
-                              key={alert.id}
-                              onClick={() => {
-                                setIsOpen(false);
-                                navigate('/drivers');
-                              }}
-                              className={cn(
-                                "p-2.5 rounded border border-base-700 bg-base-950/40 hover:bg-base-800 transition-colors cursor-pointer text-left border-l-4",
-                                alert.severity === 'expired' ? "border-l-danger" : "border-l-warning"
-                              )}
-                            >
-                              <p className="text-xs text-ink leading-normal font-medium">{alert.text}</p>
-                              <div className="flex items-center justify-between mt-1.5 text-3xs text-ink-subtle font-mono">
-                                <span>No: {alert.licenseNumber}</span>
-                                <span>Expires: {formatDate(alert.licenseExpiryDate)}</span>
+                        <div className="divide-y divide-base-800">
+                          {notifications.licenseAlerts.map(alert => {
+                            const isSent = sentDrivers.has(alert.driverId);
+                            return (
+                              <div
+                                key={alert.id}
+                                onClick={() => {
+                                  setIsOpen(false);
+                                  navigate('/drivers');
+                                }}
+                                className="py-2.5 flex items-center justify-between gap-3 hover:bg-base-900/40 transition-colors cursor-pointer text-left"
+                              >
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                  <span className={cn(
+                                    "w-1.5 h-1.5 rounded-full shrink-0 mt-1.5",
+                                    alert.severity === 'expired' ? "bg-danger" : "bg-warning"
+                                  )} />
+                                  <div className="min-w-0">
+                                    <p className="text-xs text-ink leading-normal font-medium">{alert.text}</p>
+                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-ink-subtle font-mono">
+                                      <span>No: {alert.licenseNumber}</span>
+                                      <span>•</span>
+                                      <span>Expires: {formatDate(alert.licenseExpiryDate)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {isSafetyOfficer && (
+                                  <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                    {isSent ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full border border-success/10">
+                                        <Check className="w-2.5 h-2.5" />
+                                        <span>Sent</span>
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleSendIndividualEmail(alert.driverId)}
+                                        disabled={sendingEmailFor === alert.driverId}
+                                        className="p-1 rounded bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20 transition-colors disabled:opacity-50"
+                                        title="Send reminder to this driver"
+                                      >
+                                        {sendingEmailFor === alert.driverId ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <Mail className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
-
-                        {/* SafetyOfficer Full Width Send Email Button */}
-                        {isSafetyOfficer && (
-                          <button
-                            onClick={handleSendEmail}
-                            disabled={sendingEmail}
-                            className="w-full mt-2.5 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20 transition-colors disabled:opacity-50"
-                          >
-                            {sendingEmail ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Sending...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Mail className="w-3.5 h-3.5" />
-                                <span>Send Reminder Email</span>
-                              </>
-                            )}
-                          </button>
-                        )}
                       </div>
                     )}
 
                     {/* Maintenance Section */}
                     {notifications.maintenanceAlerts.length > 0 && (
-                      <div>
-                        <h4 className="text-2xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">Maintenance Due</h4>
-                        <div className="space-y-2">
+                      <div className="mb-4">
+                        <h4 className="text-[10px] font-semibold text-ink-subtle uppercase tracking-wider mb-2">Maintenance Due</h4>
+                        <div className="divide-y divide-base-800">
                           {notifications.maintenanceAlerts.map(alert => (
                             <div
                               key={alert.id}
@@ -218,12 +260,70 @@ export default function Topbar({ title }) {
                                 setIsOpen(false);
                                 navigate('/maintenance');
                               }}
-                              className="p-2.5 rounded border border-base-700 bg-base-950/40 hover:bg-base-800 transition-colors cursor-pointer text-left border-l-4 border-l-warning"
+                              className="py-2.5 flex items-start gap-2.5 hover:bg-base-900/40 transition-colors cursor-pointer text-left"
                             >
-                              <p className="text-xs text-ink leading-normal font-medium">{alert.text}</p>
-                              <div className="flex items-center justify-between mt-1.5 text-3xs text-ink-subtle font-mono">
-                                <span>Reg: {alert.registrationNumber}</span>
-                                <span>{alert.daysSinceService} days since service</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0 mt-1.5" />
+                              <div className="min-w-0">
+                                <p className="text-xs text-ink leading-normal font-medium">{alert.text}</p>
+                                <div className="flex items-center gap-2 mt-1 text-[10px] text-ink-subtle font-mono">
+                                  <span>Reg: {alert.registrationNumber}</span>
+                                  <span>•</span>
+                                  <span>{alert.daysSinceService} days since service</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Trip Delays Section */}
+                    {notifications.tripDelayAlerts && notifications.tripDelayAlerts.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-[10px] font-semibold text-ink-subtle uppercase tracking-wider mb-2">Trip Delays</h4>
+                        <div className="divide-y divide-base-800">
+                          {notifications.tripDelayAlerts.map(alert => (
+                            <div
+                              key={alert.id}
+                              onClick={() => {
+                                setIsOpen(false);
+                                navigate('/trips');
+                              }}
+                              className="py-2.5 flex items-start gap-2.5 hover:bg-base-900/40 transition-colors cursor-pointer text-left"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0 mt-1.5" />
+                              <div className="min-w-0">
+                                <p className="text-xs text-ink leading-normal font-medium">{alert.text}</p>
+                                <div className="text-[10px] text-ink-subtle font-mono mt-1">
+                                  <span>Active Transit Alert</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fleet Warnings Section */}
+                    {notifications.utilizationAlerts && notifications.utilizationAlerts.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-[10px] font-semibold text-ink-subtle uppercase tracking-wider mb-2">Fleet Warnings</h4>
+                        <div className="divide-y divide-base-800">
+                          {notifications.utilizationAlerts.map(alert => (
+                            <div
+                              key={alert.id}
+                              onClick={() => {
+                                setIsOpen(false);
+                                navigate('/analytics');
+                              }}
+                              className="py-2.5 flex items-start gap-2.5 hover:bg-base-900/40 transition-colors cursor-pointer text-left"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-danger shrink-0 mt-1.5" />
+                              <div className="min-w-0">
+                                <p className="text-xs text-ink leading-normal font-medium">{alert.text}</p>
+                                <div className="text-[10px] text-ink-subtle font-mono mt-1">
+                                  <span>Low Performance Warning</span>
+                                </div>
                               </div>
                             </div>
                           ))}
