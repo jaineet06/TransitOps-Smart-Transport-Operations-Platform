@@ -92,16 +92,17 @@ export const NAV_ITEMS = [
   {
     label: 'Maintenance',
     path: '/maintenance',
-    roles: [UserRole.FleetManager],
+    roles: [UserRole.FleetManager, UserRole.Dispatcher, UserRole.SafetyOfficer, UserRole.FinancialAnalyst],
   },
   {
     label: 'Fuel & Expenses',
     path: '/fuel-expenses',
-    roles: [UserRole.FinancialAnalyst],
+    roles: [UserRole.FleetManager, UserRole.Dispatcher, UserRole.SafetyOfficer, UserRole.FinancialAnalyst],
   },
   {
     label: 'Analytics',
     path: '/analytics',
-    roles: [UserRole.FinancialAnalyst],
+    roles: [UserRole.FinancialAnalyst, UserRole.FleetManager],
   },
 ];
+

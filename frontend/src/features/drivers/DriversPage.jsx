@@ -197,8 +197,9 @@ export default function DriversPage() {
       if (callId !== fetchRef.current) return;
       toast.error(extractError(err));
     } finally {
-      if (callId !== fetchRef.current) return;
-      setLoading(false);
+      if (callId === fetchRef.current) {
+        setLoading(false);
+      }
     }
   }, [page, sortBy, sortOrder, filterStatus]);
 

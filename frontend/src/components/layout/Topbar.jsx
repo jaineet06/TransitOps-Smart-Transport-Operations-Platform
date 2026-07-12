@@ -1,11 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { authApi } from '../../api/auth.api';
 import useAuthStore from '../../store/authStore';
 import { ROLE_LABELS } from '../../lib/constants';
-import { extractError } from '../../lib/utils';
-import Badge from '../ui/Badge';
 
 export default function Topbar({ title }) {
   const navigate = useNavigate();

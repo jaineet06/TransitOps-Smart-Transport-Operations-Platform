@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
+import RoleRoute from './RoleRoute';
 import AppShell from '../components/layout/AppShell';
 import LoginPage from '../features/auth/LoginPage';
 import NotAuthorized from '../features/auth/NotAuthorized';
@@ -7,6 +8,9 @@ import DashboardPage from '../features/dashboard/DashboardPage';
 import VehiclesPage from '../features/vehicles/VehiclesPage';
 import DriversPage from '../features/drivers/DriversPage';
 import TripsPage from '../features/trips/TripsPage';
+import MaintenancePage from '../features/maintenance/MaintenancePage';
+import FuelExpensesPage from '../features/fuelExpenses/FuelExpensesPage';
+import AnalyticsPage from '../features/analytics/AnalyticsPage';
 
 export default function AppRoutes() {
   return (
@@ -23,10 +27,14 @@ export default function AppRoutes() {
           <Route path="/vehicles" element={<VehiclesPage />} />
           <Route path="/drivers" element={<DriversPage />} />
           <Route path="/trips" element={<TripsPage />} />
-          {/* Placeholders for future pages */}
-          <Route path="/maintenance" element={<ComingSoon title="Maintenance Logs" />} />
-          <Route path="/fuel-expenses" element={<ComingSoon title="Fuel &amp; Expenses" />} />
-          <Route path="/analytics" element={<ComingSoon title="Analytics" />} />
+          
+          <Route path="/maintenance" element={<MaintenancePage />} />
+          <Route path="/fuel-expenses" element={<FuelExpensesPage />} />
+          
+          {/* Restricted to FinancialAnalyst & FleetManager */}
+          <Route element={<RoleRoute roles={['FinancialAnalyst', 'FleetManager']} />}>
+            <Route path="/analytics" element={<AnalyticsPage />} />
+          </Route>
         </Route>
       </Route>
 
@@ -36,11 +44,3 @@ export default function AppRoutes() {
   );
 }
 
-function ComingSoon({ title }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <p className="text-lg font-semibold text-ink">{title}</p>
-      <p className="text-sm text-ink-muted">This page will be available in the next sprint.</p>
-    </div>
-  );
-}

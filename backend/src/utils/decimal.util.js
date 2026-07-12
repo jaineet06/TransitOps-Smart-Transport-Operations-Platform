@@ -1,7 +1,11 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
+function isDecimal(val) {
+    return val && typeof val === 'object' && (val instanceof Decimal || typeof val.toNumber === 'function');
+}
+
 export function toDecimal(value) {
-    if (value instanceof Decimal) {
+    if (isDecimal(value)) {
         return value;
     }
     return new Decimal(value);
@@ -11,14 +15,14 @@ export function decimalToNumber(value) {
     if (value === null || value === undefined) {
         return null;
     }
-    if (value instanceof Decimal) {
+    if (isDecimal(value)) {
         return value.toNumber();
     }
     return Number(value);
 }
 
 export function serializeDecimals(value) {
-    if (value instanceof Decimal) {
+    if (isDecimal(value)) {
         return value.toNumber();
     }
 

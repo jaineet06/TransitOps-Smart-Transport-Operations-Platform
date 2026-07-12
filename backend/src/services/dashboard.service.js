@@ -10,6 +10,7 @@ export async function getKpis() {
         driversOnDuty,
         onTripVehicleCount,
         nonRetiredVehicleCount,
+        retiredVehicles,
     ] = await Promise.all([
         prisma.vehicle.count({
             where: { status: { in: ['Available', 'OnTrip', 'InShop'] } },
@@ -25,6 +26,7 @@ export async function getKpis() {
         }),
         prisma.vehicle.count({ where: { status: 'OnTrip' } }),
         prisma.vehicle.count({ where: { status: { not: 'Retired' } } }),
+        prisma.vehicle.count({ where: { status: 'Retired' } }),
     ]);
 
     const fleetUtilization =
@@ -38,5 +40,12 @@ export async function getKpis() {
         pendingTrips,
         driversOnDuty,
         fleetUtilization,
+        vehicleStatusBreakdown: {
+            Available: availableVehicles,
+            OnTrip: onTripVehicleCount,
+            InShop: vehiclesInMaintenance,
+            Retired: retiredVehicles,
+        },
     };
 }
+

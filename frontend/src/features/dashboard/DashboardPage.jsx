@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { dashboardApi } from '../../api/dashboard.api';
 import { extractError, formatNumber } from '../../lib/utils';
 import Skeleton from '../../components/ui/Skeleton';
@@ -46,6 +47,20 @@ export default function DashboardPage() {
     : kpis.fleetUtilization >= 70 ? 'text-status-available'
     : kpis.fleetUtilization >= 40 ? 'text-status-offduty'
     : 'text-status-suspended';
+
+  const chartData = kpis?.vehicleStatusBreakdown ? [
+    { name: 'Available', value: kpis.vehicleStatusBreakdown.Available, color: '#2ABF6F' },
+    { name: 'On Trip', value: kpis.vehicleStatusBreakdown.OnTrip, color: '#5B8DEF' },
+    { name: 'In Shop', value: kpis.vehicleStatusBreakdown.InShop, color: '#EAA220' },
+    { name: 'Retired', value: kpis.vehicleStatusBreakdown.Retired, color: '#4E607A' },
+  ] : [];
+
+  const totalVehicles = kpis?.vehicleStatusBreakdown 
+    ? kpis.vehicleStatusBreakdown.Available + 
+      kpis.vehicleStatusBreakdown.OnTrip + 
+      kpis.vehicleStatusBreakdown.InShop + 
+      kpis.vehicleStatusBreakdown.Retired
+    : 0;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -108,6 +123,78 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Visual breakdown and details section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-base-900 border border-base-700 rounded-lg p-5 flex flex-col">
+          <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">Fleet Status Breakdown</h3>
+          {loading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Skeleton className="h-48 w-48 rounded-full" />
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#161B27',
+                      borderColor: '#252D3D',
+                      borderRadius: '0.375rem',
+                    }}
+                    itemStyle={{ color: '#E8EDF5', fontSize: '0.875rem' }}
+                    labelStyle={{ display: 'none' }}
+                  />
+                  <Legend
+                    verticalAlign="middle"
+                    align="right"
+                    layout="vertical"
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value, entry) => (
+                      <span className="text-xs font-semibold text-ink-muted mr-2">
+                        {value}: <span className="font-mono text-ink">{entry.payload.value}</span>
+                      </span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+        
+        <div className="bg-base-900 border border-base-700 rounded-lg p-5 flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">Active Operations</h3>
+            <p className="text-xs text-ink-muted leading-relaxed">
+              This panel shows live fleet status distribution. Status is synced automatically as drivers start, complete, or cancel their trips, and when vehicles enter or exit maintenance logs.
+            </p>
+          </div>
+          <div className="pt-4 border-t border-base-800 space-y-3 mt-4">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-medium text-ink-muted">Total Fleet Vehicles</span>
+              <span className="font-mono text-ink font-semibold">{loading ? '—' : totalVehicles}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-medium text-ink-muted">Active Fleet Size</span>
+              <span className="font-mono text-ink font-semibold">{loading ? '—' : kpis?.activeVehicles}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Zero state hint */}
       {!loading && kpis && Object.values(kpis).every((v) => v === 0) && (
         <div className="border border-base-700 rounded-lg p-8 text-center">
@@ -120,3 +207,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

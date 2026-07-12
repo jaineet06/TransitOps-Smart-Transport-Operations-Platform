@@ -72,3 +72,14 @@ export function debounce(fn, delay) {
     timer = setTimeout(() => fn(...args), delay);
   };
 }
+
+/** Safe division to prevent division-by-zero or NaN */
+export function safeDivide(numerator, denominator, fallback = '—') {
+  const num = Number(numerator);
+  const denom = Number(denominator);
+  if (isNaN(num) || isNaN(denom) || denom === 0) {
+    return fallback;
+  }
+  return num / denom;
+}
+

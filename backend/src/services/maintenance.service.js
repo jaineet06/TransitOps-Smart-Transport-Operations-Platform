@@ -57,7 +57,12 @@ export async function list(query) {
 
     const orderBy = parseSort(query, MAINTENANCE_SORT_FIELDS);
 
-    const [items, total] = await Promise.all([
+    const statsWhere = {};
+    if (query.vehicleId) {
+        statsWhere.vehicleId = query.vehicleId;
+    }
+
+    const [items, total, activeCount, closedCount] = await Promise.all([
         prisma.maintenanceLog.findMany({
             where,
             skip,
@@ -68,13 +73,20 @@ export async function list(query) {
             },
         }),
         prisma.maintenanceLog.count({ where }),
+        prisma.maintenanceLog.count({ where: { ...statsWhere, status: 'Active' } }),
+        prisma.maintenanceLog.count({ where: { ...statsWhere, status: 'Closed' } }),
     ]);
 
     return {
         items: serializeDecimals(items),
         pagination: buildPaginationMeta(total, page, limit),
+        stats: {
+            active: activeCount,
+            closed: closedCount,
+        },
     };
 }
+
 
 export async function getById(id) {
     const maintenance = await prisma.maintenanceLog.findUnique({
