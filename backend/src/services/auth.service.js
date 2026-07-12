@@ -36,7 +36,9 @@ function setRefreshTokenCookie(res, refreshToken) {
     res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        // 'lax' allows the cookie to be sent from same-host different-port dev setup
+        // (frontend:5173 → backend:5000). 'strict' blocks it.
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: REFRESH_TOKEN_MAX_AGE_MS,
         path: '/api/v1/auth',
     });
@@ -46,7 +48,7 @@ function clearRefreshTokenCookie(res) {
     res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/api/v1/auth',
     });
 }
