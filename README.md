@@ -124,28 +124,28 @@ A full-stack fleet management platform for tracking vehicles, drivers, trips, ma
 ## Screenshots
 
 ### Login Page
-![Login Page](screenshots/login.jpeg)
+![Login Page](Screenshots/login.jpeg)
 
 ### Dashboard Page
-![Dashboard Page](screenshots/dashboard.jpeg)
+![Dashboard Page](Screenshots/dashboard.jpeg)
 
 ### Vehicles Page
-![Vehicles Page](screenshots/vehicles.jpeg)
+![Vehicles Page](Screenshots/vehicles.jpeg)
 
 ### Drivers Page
-![Drivers Page](screenshots/drivers.jpeg)
+![Drivers Page](Screenshots/drivers.jpeg)
 
 ### Trips Page
-![Trips Page](screenshots/trips-kanban.jpeg)
+![Trips Page](Screenshots/trips-kanban.jpeg)
 
 ### Maintenance Page
-![Maintenance Page](screenshots/maintenance-calendar.jpeg)
+![Maintenance Page](Screenshots/maintenance-calendar.jpeg)
 
 ### Fuel & Expenses Page
-![Fuel & Expenses Page](screenshots/fuel-expenses.jpeg)
+![Fuel & Expenses Page](Screenshots/fuel-expenses.jpeg)
 
 ### Analytics Page
-![Analytics Page](screenshots/analytics.jpeg)
+![Analytics Page](Screenshots/analytics.jpeg)
 
 ---
 
