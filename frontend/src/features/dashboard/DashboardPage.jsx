@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { dashboardApi } from '../../api/dashboard.api';
 import { extractError, formatNumber } from '../../lib/utils';
 import Skeleton from '../../components/ui/Skeleton';
+import useThemeStore from '../../store/themeStore';
 
 function KpiCard({ label, value, sub, loading, accent }) {
   return (
@@ -27,6 +28,11 @@ function KpiCard({ label, value, sub, loading, accent }) {
 export default function DashboardPage() {
   const [kpis, setKpis] = useState(null);
   const [loading, setLoading] = useState(true);
+  const theme = useThemeStore((s) => s.theme);
+
+  const tooltipBg = theme === 'dark' ? '#161B27' : '#FFFFFF';
+  const tooltipBorder = theme === 'dark' ? '#252D3D' : '#E2E8F0';
+  const tooltipColor = theme === 'dark' ? '#E8EDF5' : '#0F172A';
 
   useEffect(() => {
     const load = async () => {
@@ -150,11 +156,11 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#161B27',
-                      borderColor: '#252D3D',
+                      backgroundColor: tooltipBg,
+                      borderColor: tooltipBorder,
                       borderRadius: '0.375rem',
                     }}
-                    itemStyle={{ color: '#E8EDF5', fontSize: '0.875rem' }}
+                    itemStyle={{ color: tooltipColor, fontSize: '0.875rem' }}
                     labelStyle={{ display: 'none' }}
                   />
                   <Legend

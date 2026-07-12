@@ -3,6 +3,106 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-base-950: #F8FAFC;
+    --color-base-900: #FFFFFF;
+    --color-base-800: #F1F5F9;
+    --color-base-700: #E2E8F0;
+    --color-base-600: #CBD5E1;
+
+    --color-ink: #0F172A;
+    --color-ink-muted: #475569;
+    --color-ink-subtle: #94A3B8;
+
+    --color-accent: #3B82F6;
+    --color-accent-hover: #1D4ED8;
+    --color-accent-muted: #EFF6FF;
+
+    --color-status-available: #10B981;
+    --color-status-available-bg: #D1FAE5;
+    --color-status-ontrip: #3B82F6;
+    --color-status-ontrip-bg: #DBEAFE;
+    --color-status-inshop: #F59E0B;
+    --color-status-inshop-bg: #FEF3C7;
+    --color-status-retired: #64748B;
+    --color-status-retired-bg: #F1F5F9;
+    --color-status-offduty: #F59E0B;
+    --color-status-offduty-bg: #FEF3C7;
+    --color-status-suspended: #EF4444;
+    --color-status-suspended-bg: #FEE2E2;
+    --color-status-draft: #64748B;
+    --color-status-draft-bg: #F1F5F9;
+    --color-status-dispatched: #3B82F6;
+    --color-status-dispatched-bg: #DBEAFE;
+    --color-status-completed: #10B981;
+    --color-status-completed-bg: #D1FAE5;
+    --color-status-cancelled: #EF4444;
+    --color-status-cancelled-bg: #FEE2E2;
+
+    --color-danger: #EF4444;
+    --color-danger-hover: #DC2626;
+    --color-danger-muted: #FEE2E2;
+    
+    --color-success: #10B981;
+    --color-success-muted: #D1FAE5;
+    
+    --color-warning: #F59E0B;
+    --color-warning-muted: #FEF3C7;
+
+    --color-skeleton-bg: #E2E8F0;
+    --color-skeleton-shimmer: #F1F5F9;
+  }
+
+  .dark {
+    --color-base-950: #0E1117;
+    --color-base-900: #161B27;
+    --color-base-800: #1C2235;
+    --color-base-700: #252D3D;
+    --color-base-600: #2E3A50;
+
+    --color-ink: #E8EDF5;
+    --color-ink-muted: #7B8FAD;
+    --color-ink-subtle: #4E607A;
+
+    --color-accent: #5B8DEF;
+    --color-accent-hover: #7AA3F3;
+    --color-accent-muted: #2A3F6B;
+
+    --color-status-available: #2ABF6F;
+    --color-status-available-bg: #0D2B1E;
+    --color-status-ontrip: #5B8DEF;
+    --color-status-ontrip-bg: #0F1F3D;
+    --color-status-inshop: #EAA220;
+    --color-status-inshop-bg: #2C2006;
+    --color-status-retired: #4E607A;
+    --color-status-retired-bg: #1A2232;
+    --color-status-offduty: #EAA220;
+    --color-status-offduty-bg: #2C2006;
+    --color-status-suspended: #E0504A;
+    --color-status-suspended-bg: #2B0E0D;
+    --color-status-draft: #7B8FAD;
+    --color-status-draft-bg: #1A2232;
+    --color-status-dispatched: #5B8DEF;
+    --color-status-dispatched-bg: #0F1F3D;
+    --color-status-completed: #2ABF6F;
+    --color-status-completed-bg: #0D2B1E;
+    --color-status-cancelled: #E0504A;
+    --color-status-cancelled-bg: #2B0E0D;
+
+    --color-danger: #E0504A;
+    --color-danger-hover: #E8706B;
+    --color-danger-muted: #2B0E0D;
+    
+    --color-success: #2ABF6F;
+    --color-success-muted: #0D2B1E;
+    
+    --color-warning: #EAA220;
+    --color-warning-muted: #2C2006;
+
+    --color-skeleton-bg: #1C2235;
+    --color-skeleton-shimmer: #252D3D;
+  }
+
   *, *::before, *::after {
     box-sizing: border-box;
   }
@@ -14,7 +114,7 @@
   }
 
   body {
-    @apply bg-base-950 text-ink font-sans text-sm leading-relaxed;
+    @apply bg-base-950 text-ink font-sans text-sm leading-relaxed transition-colors duration-200;
     min-height: 100vh;
   }
 
@@ -45,9 +145,9 @@
   .skeleton-shimmer {
     background: linear-gradient(
       90deg,
-      #1C2235 0%,
-      #252D3D 50%,
-      #1C2235 100%
+      var(--color-skeleton-bg) 0%,
+      var(--color-skeleton-shimmer) 50%,
+      var(--color-skeleton-bg) 100%
     );
     background-size: 400px 100%;
     @apply animate-shimmer rounded;
@@ -64,12 +164,12 @@
   .form-input {
     @apply w-full px-3 py-2 bg-base-800 border border-base-700 rounded text-ink text-sm
            placeholder:text-ink-subtle
-           focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30
+           focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent-muted
            transition-colors duration-150;
   }
 
   .form-input-error {
-    @apply border-danger focus:border-danger focus:ring-danger/30;
+    @apply border-danger focus:border-danger focus:ring-danger-muted;
   }
 
   .field-error {

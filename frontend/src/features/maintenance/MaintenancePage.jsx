@@ -9,6 +9,8 @@ import { vehiclesApi } from '../../api/vehicles.api';
 
 import { extractError, formatCurrency, formatDate, zodErrorMap } from '../../lib/utils';
 import useAuthStore from '../../store/authStore';
+import useThemeStore from '../../store/themeStore';
+import Skeleton from '../../components/ui/Skeleton';
 
 import Table from '../../components/ui/Table';
 import Badge from '../../components/ui/Badge';
@@ -148,6 +150,11 @@ export default function MaintenancePage() {
   const [stats, setStats] = useState({ active: 0, closed: 0 });
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
+  const theme = useThemeStore((s) => s.theme);
+
+  const tooltipBg = theme === 'dark' ? '#161B27' : '#FFFFFF';
+  const tooltipBorder = theme === 'dark' ? '#252D3D' : '#E2E8F0';
+  const tooltipColor = theme === 'dark' ? '#E8EDF5' : '#0F172A';
   const [vehicles, setVehicles] = useState([]);
 
   // Filters
@@ -346,17 +353,27 @@ export default function MaintenancePage() {
           <div className="flex gap-6 pt-2">
             <div className="bg-base-950 px-4 py-3 rounded border border-base-800 flex-1">
               <span className="text-2xs font-semibold text-ink-subtle uppercase tracking-wider block">Active Repairs</span>
-              <span className="text-2xl font-semibold font-mono text-status-inshop">{stats.active}</span>
+              {loading ? (
+                <Skeleton className="h-8 w-16 mt-1" />
+              ) : (
+                <span className="text-2xl font-semibold font-mono text-status-inshop">{stats.active}</span>
+              )}
             </div>
             <div className="bg-base-950 px-4 py-3 rounded border border-base-800 flex-1">
               <span className="text-2xs font-semibold text-ink-subtle uppercase tracking-wider block">Closed Services</span>
-              <span className="text-2xl font-semibold font-mono text-status-available">{stats.closed}</span>
+              {loading ? (
+                <Skeleton className="h-8 w-16 mt-1" />
+              ) : (
+                <span className="text-2xl font-semibold font-mono text-status-available">{stats.closed}</span>
+              )}
             </div>
           </div>
         </div>
 
         <div className="h-40 flex items-center justify-center">
-          {stats.active === 0 && stats.closed === 0 ? (
+          {loading ? (
+            <Skeleton className="h-24 w-24 rounded-full" />
+          ) : stats.active === 0 && stats.closed === 0 ? (
             <span className="text-xs text-ink-subtle italic">No logs found to summarize</span>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -376,11 +393,11 @@ export default function MaintenancePage() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#161B27',
-                    borderColor: '#252D3D',
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
                     borderRadius: '0.375rem',
                   }}
-                  itemStyle={{ color: '#E8EDF5', fontSize: '0.75rem' }}
+                  itemStyle={{ color: tooltipColor, fontSize: '0.75rem' }}
                   labelStyle={{ display: 'none' }}
                 />
                 <Legend

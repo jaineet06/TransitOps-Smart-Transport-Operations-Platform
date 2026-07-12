@@ -11,10 +11,11 @@ import autoTable from 'jspdf-autotable';
 import { analyticsApi } from '../../api/analytics.api';
 import { tripsApi } from '../../api/trips.api';
 import { extractError, formatCurrency, formatNumber, safeDivide } from '../../lib/utils';
+import useThemeStore from '../../store/themeStore';
+import Skeleton from '../../components/ui/Skeleton';
 
 import Table from '../../components/ui/Table';
 import Button from '../../components/ui/Button';
-import Spinner from '../../components/ui/Spinner';
 
 export default function AnalyticsPage() {
   // Tab states: 'efficiency', 'utilization', 'costs', 'roi', 'trips'
@@ -29,6 +30,13 @@ export default function AnalyticsPage() {
   
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(null);
+  const theme = useThemeStore((s) => s.theme);
+
+  const tooltipBg = theme === 'dark' ? '#161B27' : '#FFFFFF';
+  const tooltipBorder = theme === 'dark' ? '#252D3D' : '#E2E8F0';
+  const tooltipColor = theme === 'dark' ? '#E8EDF5' : '#0F172A';
+  const chartGrid = theme === 'dark' ? '#252D3D' : '#E2E8F0';
+  const chartText = theme === 'dark' ? '#7B8FAD' : '#475569';
 
   const loadAllData = async () => {
     setLoading(true);
@@ -263,13 +271,7 @@ export default function AnalyticsPage() {
     doc.save(`${report}-report.pdf`);
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  // Loader is handled inline for layout charts and tables
 
   // Visualization preparations
   // 1. Efficiency Chart Data
@@ -357,19 +359,23 @@ export default function AnalyticsPage() {
 
               {/* Chart */}
               <div className="h-64 bg-base-950/40 p-4 rounded border border-base-800">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={efficiencyChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#252D3D" />
-                    <XAxis dataKey="name" stroke="#7B8FAD" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#7B8FAD" fontSize={10} tickLine={false} label={{ value: 'km / Liter', angle: -90, position: 'insideLeft', fill: '#7B8FAD', fontSize: 10, offset: 10 }} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#161B27', borderColor: '#252D3D', borderRadius: '0.375rem' }}
-                      itemStyle={{ color: '#E8EDF5', fontSize: '0.75rem' }}
-                      labelStyle={{ color: '#7B8FAD', fontSize: '0.75rem' }}
-                    />
-                    <Bar dataKey="efficiency" fill="#5B8DEF" radius={[4, 4, 0, 0]} name="Efficiency (km/L)" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {loading ? (
+                  <Skeleton className="h-full w-full" />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={efficiencyChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                      <XAxis dataKey="name" stroke={chartText} fontSize={10} tickLine={false} />
+                      <YAxis stroke={chartText} fontSize={10} tickLine={false} label={{ value: 'km / Liter', angle: -90, position: 'insideLeft', fill: chartText, fontSize: 10, offset: 10 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '0.375rem' }}
+                        itemStyle={{ color: tooltipColor, fontSize: '0.75rem' }}
+                        labelStyle={{ color: chartText, fontSize: '0.75rem' }}
+                      />
+                      <Bar dataKey="efficiency" fill="#5B8DEF" radius={[4, 4, 0, 0]} name="Efficiency (km/L)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
               {/* Table */}
@@ -411,50 +417,62 @@ export default function AnalyticsPage() {
                 {/* Visual Gauge */}
                 <div className="md:col-span-1 h-56 bg-base-950/40 border border-base-800 rounded p-4 flex flex-col items-center justify-center relative">
                   <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Live Utilization</span>
-                  <div className="w-full h-40 flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { value: utilizationPercent },
-                            { value: 100 - utilizationPercent }
-                          ]}
-                          cx="50%"
-                          cy="70%"
-                          startAngle={180}
-                          endAngle={0}
-                          innerRadius={60}
-                          outerRadius={80}
-                          dataKey="value"
-                        >
-                          <Cell key="cell-0" fill="#2ABF6F" />
-                          <Cell key="cell-1" fill="#1C2235" />
-                        </Pie>
-                        <text
-                          x="50%"
-                          y="62%"
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          className="text-2xl font-bold font-mono"
-                          fill="#E8EDF5"
-                        >
-                          {utilizationPercent}%
-                        </text>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {loading ? (
+                    <Skeleton className="h-28 w-28 rounded-full" />
+                  ) : (
+                    <div className="w-full h-40 flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { value: utilizationPercent },
+                              { value: 100 - utilizationPercent }
+                            ]}
+                            cx="50%"
+                            cy="70%"
+                            startAngle={180}
+                            endAngle={0}
+                            innerRadius={60}
+                            outerRadius={80}
+                            dataKey="value"
+                          >
+                            <Cell key="cell-0" fill="#2ABF6F" />
+                            <Cell key="cell-1" fill={theme === 'dark' ? '#1C2235' : '#F1F5F9'} />
+                          </Pie>
+                          <text
+                            x="50%"
+                            y="62%"
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="text-2xl font-bold font-mono"
+                            fill={theme === 'dark' ? '#E8EDF5' : '#0F172A'}
+                          >
+                            {utilizationPercent}%
+                          </text>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </div>
 
                 {/* Utilization Info Cards */}
                 <div className="md:col-span-2 grid grid-cols-2 gap-4">
                   <div className="bg-base-950/40 border border-base-800 rounded p-5">
                     <span className="text-2xs font-semibold text-ink-subtle uppercase tracking-wider block">Vehicles on Trip</span>
-                    <span className="text-3xl font-bold font-mono text-status-ontrip">{fleetUtilization?.vehiclesOnTrip ?? 0}</span>
+                    {loading ? (
+                      <Skeleton className="h-8 w-16 mt-1" />
+                    ) : (
+                      <span className="text-3xl font-bold font-mono text-status-ontrip">{fleetUtilization?.vehiclesOnTrip ?? 0}</span>
+                    )}
                     <span className="text-2xs text-ink-muted block mt-1">Currently dispatched</span>
                   </div>
                   <div className="bg-base-950/40 border border-base-800 rounded p-5">
                     <span className="text-2xs font-semibold text-ink-subtle uppercase tracking-wider block">Active Fleet Size</span>
-                    <span className="text-3xl font-bold font-mono text-ink">{fleetUtilization?.totalNonRetiredVehicles ?? 0}</span>
+                    {loading ? (
+                      <Skeleton className="h-8 w-16 mt-1" />
+                    ) : (
+                      <span className="text-3xl font-bold font-mono text-ink">{fleetUtilization?.totalNonRetiredVehicles ?? 0}</span>
+                    )}
                     <span className="text-2xs text-ink-muted block mt-1">Excludes retired vehicles</span>
                   </div>
                 </div>
@@ -482,25 +500,29 @@ export default function AnalyticsPage() {
 
               {/* Chart */}
               <div className="h-64 bg-base-950/40 p-4 rounded border border-base-800">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={costChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#252D3D" />
-                    <XAxis dataKey="name" stroke="#7B8FAD" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#7B8FAD" fontSize={10} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#161B27', borderColor: '#252D3D', borderRadius: '0.375rem' }}
-                      itemStyle={{ color: '#E8EDF5', fontSize: '0.75rem' }}
-                      labelStyle={{ color: '#7B8FAD', fontSize: '0.75rem' }}
-                    />
-                    <Legend
-                      iconType="circle"
-                      iconSize={6}
-                      formatter={(value) => <span className="text-xs text-ink-muted">{value}</span>}
-                    />
-                    <Bar dataKey="fuel" stackId="a" fill="#5B8DEF" name="Fuel Cost (₹)" />
-                    <Bar dataKey="maintenance" stackId="a" fill="#EAA220" name="Maintenance Cost (₹)" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {loading ? (
+                  <Skeleton className="h-full w-full" />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={costChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                      <XAxis dataKey="name" stroke={chartText} fontSize={10} tickLine={false} />
+                      <YAxis stroke={chartText} fontSize={10} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '0.375rem' }}
+                        itemStyle={{ color: tooltipColor, fontSize: '0.75rem' }}
+                        labelStyle={{ color: chartText, fontSize: '0.75rem' }}
+                      />
+                      <Legend
+                        iconType="circle"
+                        iconSize={6}
+                        formatter={(value) => <span className="text-xs text-ink-muted">{value}</span>}
+                      />
+                      <Bar dataKey="fuel" stackId="a" fill="#5B8DEF" name="Fuel Cost (₹)" />
+                      <Bar dataKey="maintenance" stackId="a" fill="#EAA220" name="Maintenance Cost (₹)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
               {/* Table */}
@@ -540,23 +562,27 @@ export default function AnalyticsPage() {
 
               {/* Chart */}
               <div className="h-64 bg-base-950/40 p-4 rounded border border-base-800">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={roiChartData} layout="vertical" margin={{ top: 5, right: 10, left: 30, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#252D3D" />
-                    <XAxis type="number" stroke="#7B8FAD" fontSize={10} tickLine={false} label={{ value: 'ROI %', position: 'bottom', fill: '#7B8FAD', fontSize: 10 }} />
-                    <YAxis dataKey="name" type="category" stroke="#7B8FAD" fontSize={8} tickLine={false} width={80} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#161B27', borderColor: '#252D3D', borderRadius: '0.375rem' }}
-                      itemStyle={{ color: '#E8EDF5', fontSize: '0.75rem' }}
-                      labelStyle={{ color: '#7B8FAD', fontSize: '0.75rem' }}
-                    />
-                    <Bar dataKey="roi" name="ROI (%)">
-                      {roiChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.roi >= 0 ? '#2ABF6F' : '#E0504A'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                {loading ? (
+                  <Skeleton className="h-full w-full" />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={roiChartData} layout="vertical" margin={{ top: 5, right: 10, left: 30, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                      <XAxis type="number" stroke={chartText} fontSize={10} tickLine={false} label={{ value: 'ROI %', position: 'bottom', fill: chartText, fontSize: 10 }} />
+                      <YAxis dataKey="name" type="category" stroke={chartText} fontSize={8} tickLine={false} width={80} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '0.375rem' }}
+                        itemStyle={{ color: tooltipColor, fontSize: '0.75rem' }}
+                        labelStyle={{ color: chartText, fontSize: '0.75rem' }}
+                      />
+                      <Bar dataKey="roi" name="ROI (%)">
+                        {roiChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.roi >= 0 ? '#2ABF6F' : '#E0504A'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
               {/* Table */}
@@ -598,25 +624,29 @@ export default function AnalyticsPage() {
 
               {/* Chart */}
               <div className="h-64 bg-base-950/40 p-4 rounded border border-base-800">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={tripTrend} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#252D3D" />
-                    <XAxis dataKey="date" stroke="#7B8FAD" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#7B8FAD" fontSize={10} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#161B27', borderColor: '#252D3D', borderRadius: '0.375rem' }}
-                      itemStyle={{ color: '#E8EDF5', fontSize: '0.75rem' }}
-                      labelStyle={{ color: '#7B8FAD', fontSize: '0.75rem' }}
-                    />
-                    <Legend
-                      iconType="circle"
-                      iconSize={6}
-                      formatter={(value) => <span className="text-xs text-ink-muted">{value}</span>}
-                    />
-                    <Line type="monotone" dataKey="created" name="Trips Created" stroke="#5B8DEF" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="completed" name="Trips Completed" stroke="#2ABF6F" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {loading ? (
+                  <Skeleton className="h-full w-full" />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={tripTrend} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                      <XAxis dataKey="date" stroke={chartText} fontSize={10} tickLine={false} />
+                      <YAxis stroke={chartText} fontSize={10} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '0.375rem' }}
+                        itemStyle={{ color: tooltipColor, fontSize: '0.75rem' }}
+                        labelStyle={{ color: chartText, fontSize: '0.75rem' }}
+                      />
+                      <Legend
+                        iconType="circle"
+                        iconSize={6}
+                        formatter={(value) => <span className="text-xs text-ink-muted">{value}</span>}
+                      />
+                      <Line type="monotone" dataKey="created" name="Trips Created" stroke="#5B8DEF" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="completed" name="Trips Completed" stroke="#2ABF6F" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
               {/* Table */}

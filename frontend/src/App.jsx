@@ -3,12 +3,15 @@ import { Toaster } from 'react-hot-toast';
 import { useEffect } from 'react';
 import { authApi } from './api/auth.api';
 import useAuthStore from './store/authStore';
+import useThemeStore from './store/themeStore';
 import AppRoutes from './routes/AppRoutes';
 
 function AuthBootstrap({ children }) {
   const { setAuth, clearAuth } = useAuthStore();
+  const initTheme = useThemeStore((s) => s.initTheme);
 
   useEffect(() => {
+    initTheme();
     const restoreSession = async () => {
       try {
         // Call /auth/refresh — it uses the httpOnly cookie and returns

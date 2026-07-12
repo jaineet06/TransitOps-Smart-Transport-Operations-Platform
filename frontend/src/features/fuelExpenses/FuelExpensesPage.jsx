@@ -11,6 +11,7 @@ import { vehiclesApi } from '../../api/vehicles.api';
 
 import { extractError, formatCurrency, formatDate, formatNumber, zodErrorMap } from '../../lib/utils';
 import useAuthStore from '../../store/authStore';
+import useThemeStore from '../../store/themeStore';
 
 import Table from '../../components/ui/Table';
 import Button from '../../components/ui/Button';
@@ -249,6 +250,13 @@ export default function FuelExpensesPage() {
 
   // Tabs: 'fuel' or 'expenses'
   const [activeTab, setActiveTab] = useState('fuel');
+  const theme = useThemeStore((s) => s.theme);
+
+  const tooltipBg = theme === 'dark' ? '#161B27' : '#FFFFFF';
+  const tooltipBorder = theme === 'dark' ? '#252D3D' : '#E2E8F0';
+  const tooltipColor = theme === 'dark' ? '#E8EDF5' : '#0F172A';
+  const chartGrid = theme === 'dark' ? '#252D3D' : '#E2E8F0';
+  const chartText = theme === 'dark' ? '#7B8FAD' : '#475569';
 
   // Lists
   const [fuelLogs, setFuelLogs] = useState([]);
@@ -563,17 +571,17 @@ export default function FuelExpensesPage() {
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#252D3D" />
-                <XAxis dataKey="date" stroke="#7B8FAD" fontSize={10} tickLine={false} />
-                <YAxis stroke="#7B8FAD" fontSize={10} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="date" stroke={chartText} fontSize={10} tickLine={false} />
+                <YAxis stroke={chartText} fontSize={10} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#161B27',
-                    borderColor: '#252D3D',
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
                     borderRadius: '0.375rem',
                   }}
-                  itemStyle={{ color: '#E8EDF5', fontSize: '0.75rem' }}
-                  labelStyle={{ color: '#7B8FAD', fontSize: '0.75rem' }}
+                  itemStyle={{ color: tooltipColor, fontSize: '0.75rem' }}
+                  labelStyle={{ color: chartText, fontSize: '0.75rem' }}
                 />
                 <Line
                   type="monotone"
