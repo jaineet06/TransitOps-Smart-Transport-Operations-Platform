@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-base-950 text-ink font-sans text-sm leading-relaxed;
+    min-height: 100vh;
+  }
+
+  h1 { @apply text-2xl font-semibold tracking-tight; }
+  h2 { @apply text-xl font-semibold tracking-tight; }
+  h3 { @apply text-base font-semibold; }
+
+  input, select, textarea {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-base-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-base-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-subtle;
+  }
+}
+
+@layer components {
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      #1C2235 0%,
+      #252D3D 50%,
+      #1C2235 100%
+    );
+    background-size: 400px 100%;
+    @apply animate-shimmer rounded;
+  }
+
+  .table-row-hover {
+    @apply transition-colors duration-100 hover:bg-base-800;
+  }
+
+  .form-label {
+    @apply block text-xs font-medium text-ink-muted mb-1.5 uppercase tracking-wide;
+  }
+
+  .form-input {
+    @apply w-full px-3 py-2 bg-base-800 border border-base-700 rounded text-ink text-sm
+           placeholder:text-ink-subtle
+           focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30
+           transition-colors duration-150;
+  }
+
+  .form-input-error {
+    @apply border-danger focus:border-danger focus:ring-danger/30;
+  }
+
+  .field-error {
+    @apply text-xs text-danger mt-1;
+  }
+}
